@@ -11,10 +11,13 @@ DATA_DIR = "/data"
 SEED_PATH = os.path.join(DATA_DIR, "seed.txt")
 FALLBACK_SEED_PATH = os.path.join(os.getcwd(), "data", "seed.txt")
 PRIVATE_KEY_PATH = "student_private.pem"
+
 class DecryptRequest(BaseModel):
     encrypted_seed: str
+
 class VerifyRequest(BaseModel):
     code: Optional[str] = None
+
 def _get_seed_path():
     """
     Return path to seed file if present, or None if not present.
@@ -48,7 +51,6 @@ async def decrypt_seed_endpoint(req: DecryptRequest):
         try:
             os.chmod(SEED_PATH, 0o600)
         except Exception:
-            # ignore chmod failures on Windows / restricted FS
             pass
     except Exception:
         return JSONResponse(status_code=500, content={"error": "Decryption failed"})
@@ -72,7 +74,6 @@ async def generate_2fa():
 
 @app.post("/verify-2fa")
 async def verify_2fa(req: VerifyRequest):
-    # Validate code presence
     if not req.code:
         return JSONResponse(status_code=400, content={"error": "Missing code"})
 
@@ -88,3 +89,15 @@ async def verify_2fa(req: VerifyRequest):
         return JSONResponse(status_code=500, content={"error": "Seed not decrypted yet"})
 
     return JSONResponse(status_code=200, content={"valid": bool(valid)})
+
+# ------------------------
+# NEW ENDPOINTS FOR STEP 8
+# ------------------------
+
+@app.get("/")
+def root():
+    return {"message": "Secure PKI 2FA service is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

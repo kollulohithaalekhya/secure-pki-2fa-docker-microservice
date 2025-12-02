@@ -1,53 +1,65 @@
-# Stage 1: Builder - install Python deps into /install
+# -------------------------
+# Stage 1: Builder
+# -------------------------
 FROM python:3.11-slim AS builder
-ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
-# Install build deps required by wheels (e.g. cryptography)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential gcc libssl-dev libffi-dev python3-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Install build deps (only if your packages need them)
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip && \
-    python -m pip install --prefix=/install -r /app/requirements.txt
+# Copy dependency file and install to a wheel cache
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-# Stage 2: Runtime - minimal image + cron + tzdata
-FROM python:3.11-slim
-ENV TZ=UTC
-ENV PATH=/install/bin:$PATH
-ENV PYTHONPATH=/install/lib/python3.11/site-packages:$PYTHONPATH
-WORKDIR /app
-
-# Install runtime system deps: cron + tzdata, configure UTC
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends cron tzdata && \
-    ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata || true && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy installed python packages from builder
-COPY --from=builder /install /install
-
-# Copy application code into the image (including keys & cron config)
+# Copy app source (only needed to build if you compile assets; otherwise optional)
 COPY . /app
 
-# Create runtime directories (to be mounted as volumes at runtime if desired)
-RUN mkdir -p /data /cron && chmod 755 /data /cron
+# -------------------------
+# Stage 2: Runtime
+# -------------------------
+FROM python:3.11-slim AS runtime
 
-# Install cron file if provided in repo at cron/2fa-cron
-RUN if [ -f /app/cron/2fa-cron ]; then \
-      install -m 0644 /app/cron/2fa-cron /etc/cron.d/2fa-cron && \
-      chmod 0644 /etc/cron.d/2fa-cron && \
-      crontab /etc/cron.d/2fa-cron; \
-    fi
+# Set timezone env (critical) and minimal env
+ENV TZ=UTC
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
 
-# Copy entrypoint and make executable
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Install runtime system dependencies (cron, tzdata)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends cron tzdata ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# Expose API port
+# Configure timezone to UTC
+RUN ln -sf /usr/share/zoneinfo/UTC /etc/localtime \
+ && echo "UTC" > /etc/timezone
+
+# Copy python wheels from builder and install
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache /wheels/*
+
+# Copy application code, scripts, and cron config
+COPY --chown=root:root . /app
+
+# Ensure scripts are executable
+RUN chmod +x /app/start.sh /app/scripts/cron-job.sh
+
+# Place cron schedule into /etc/cron.d
+COPY cron/mycron /etc/cron.d/mycron
+RUN chmod 0644 /etc/cron.d/mycron
+
+# Install the cron file (optional: register with crontab so 'crontab -l' shows it)
+RUN crontab /etc/cron.d/mycron || true
+
+# Create required runtime directories and set perms
+RUN mkdir -p /data /cron /var/log/myapp \
+ && chmod 755 /data /cron
+
+VOLUME ["/data", "/cron"]
+
+# Expose service port
 EXPOSE 8080
 
-# Entrypoint will start cron and then the app server (uvicorn)
-ENTRYPOINT ["/entrypoint.sh"]
+# Use entrypoint script to start cron and the app
+ENTRYPOINT ["/app/start.sh"]
