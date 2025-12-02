@@ -95,9 +95,10 @@ async def verify_2fa(req: VerifyRequest):
 # ------------------------
 
 @app.get("/")
-def root():
-    return {"message": "Secure PKI 2FA service is running"}
+def read_root():
+    return {"status":"ok","message":"hello from container"}
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status":"healthy"}
+

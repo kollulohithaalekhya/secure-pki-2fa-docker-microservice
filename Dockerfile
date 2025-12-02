@@ -26,9 +26,9 @@ ENV TZ=UTC
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Install runtime system dependencies (cron, tzdata)
+# Install runtime system dependencies (cron, tzdata, curl)
 RUN apt-get update \
- && apt-get install -y --no-install-recommends cron tzdata ca-certificates \
+ && apt-get install -y --no-install-recommends cron tzdata ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
 # Configure timezone to UTC
