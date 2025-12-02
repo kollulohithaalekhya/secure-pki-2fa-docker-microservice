@@ -1,2 +1,2 @@
-# run /app/scripts/cron-job.sh every minute as root for testing
-* * * * * root /app/scripts/cron-job.sh >> /var/log/cron.log 2>&1
+# run 2FA cron job every minute
+* * * * * root /app/scripts/cron-job.sh >> /cron/last_code.txt 2>&1
