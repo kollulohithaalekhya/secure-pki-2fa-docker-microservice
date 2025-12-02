@@ -1,4 +1,0 @@
-# Example cron: run a 2FA cleanup script every 5 minutes
-# Format: <min> <hour> <day> <month> <weekday> user command
-# For Docker containers, put paths absolute and ensure script is executable.
-*/5 * * * * root /app/scripts/cleanup_2fa.sh >> /var/log/2fa-cron.log 2>&1
