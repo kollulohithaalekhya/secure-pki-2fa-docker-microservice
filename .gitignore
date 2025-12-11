@@ -1,17 +1,14 @@
-# Encrypted seed (sensitive, do not commit)
+# Sensitive / local files
 encrypted_seed.txt
+/data/seed.txt
 
-# Python cache files
+# Python cache
 __pycache__/
 *.pyc
 
-# Environment variable files
+# Environment files
 .env
 
-# Editor/IDE folders
+# IDE/editor
 .vscode/
 .idea/
-
-# Operating system files
-.DS_Store
-Thumbs.db
