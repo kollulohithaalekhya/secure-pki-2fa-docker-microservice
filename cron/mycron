@@ -1,2 +1,1 @@
-# run 2FA cron job every minute
 * * * * * root /app/scripts/cron-job.sh >> /cron/last_code.txt 2>&1

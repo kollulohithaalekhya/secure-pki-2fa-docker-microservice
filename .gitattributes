@@ -1,1 +1,3 @@
-cron/2fa-cron text eol=lf
+cron/2fa-cron text eol=lfcron/mycron text eol=lf
+scripts/* text eol=lf
+start.sh text eol=lf
